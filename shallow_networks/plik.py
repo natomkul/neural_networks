@@ -24,6 +24,7 @@ b2 = np.zeros((1, 1))
 
 lr = 0.1  # współczynnik uczenia
 epochs = 10000
+mse_threshold = 0.001  # próg do wcześniejszego zakończenia uczenia
 
 # HISTORIA
 # - MSE
@@ -70,6 +71,12 @@ for _ in range(epochs):
     b2 += np.sum(d2, axis=0, keepdims=True) * lr
     W1 += X.T @ d1 * lr
     b1 += np.sum(d1, axis=0, keepdims=True) * lr
+
+    # Wczesne zakończenie uczenia
+    if mse_output < mse_threshold:
+        print(f"Uczenie zakończone w epoce {epoch+1}, MSE={mse_output:.6f}")
+        break
+
 
 # Wykresy
 # - MSE
