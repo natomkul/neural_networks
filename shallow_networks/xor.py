@@ -1,18 +1,18 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-# 1. Funkcje aktywacji
+# Funkcje aktywacji
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
 def sigmoid_derivative(x):
     return x * (1 - x)
 
-# 2. Dane problemu XOR
+# Dane problemu XOR
 X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
 y = np.array([[0], [1], [1], [0]])
 
-# 3. Inicjalizacja sieci
+# Inicjalizacja sieci
 np.random.seed(42)
 input_dim = 2
 hidden_dim = 2
@@ -30,15 +30,13 @@ epochs = 10000
 target_mse = 0.001
 
 # Historia błędów do wykresów
-mse_output_history = []
-mse_hidden_history = []
+mse_total_history = []
+mse_examples_history = []
 class_error_history = []
-
-# Listy do przechowywania historii wag
 wh_history = []
 wout_history = []
 
-# 4. Pętla uczenia
+# Pętla uczenia
 for epoch in range(epochs):
     # --- Forward Propagation ---
     hidden_input = np.dot(X, wh) + bh
@@ -47,30 +45,29 @@ for epoch in range(epochs):
     final_input = np.dot(hidden_output, wout) + bout
     predicted = sigmoid(final_input)
 
-    # --- Obliczanie metryk błędu ---
-    # MSE Wyjściowe
-    mse_out = np.mean(np.square(y - predicted))
-    mse_output_history.append(mse_out)
+    # OBLICZANIE MSE
+    # każdego z osobna
+    individual_mse = np.square(y - predicted)
+    mse_examples_history.append(individual_mse.flatten())
 
-    # Błąd Klasyfikacji (Próg 0.5)
+    # całego zbioru
+    mse_total = np.mean(individual_mse)
+    mse_total_history.append(mse_total)
+
+    # Błąd Klasyfikacji
     predictions_binary = (predicted >= 0.5).astype(int)
     error_rate = np.mean(predictions_binary != y)
     class_error_history.append(error_rate)
 
-    # Zapisywanie wag (kopia, aby uniknąć referencji)
+    # Zapisywanie wag
     wh_history.append(wh.copy())
     wout_history.append(wout.copy())
 
     # --- Backpropagation ---
-    # Błąd warstwy wyjściowej
     output_error = y - predicted
     d_predicted = output_error * sigmoid_derivative(predicted)
     
-    # Błąd warstwy ukrytej (sygnał płynący wstecz)
     hidden_error = d_predicted.dot(wout.T)
-    mse_hid = np.mean(np.square(hidden_error))
-    mse_hidden_history.append(mse_hid)
-    
     d_hidden = hidden_error * sigmoid_derivative(hidden_output)
 
     # --- Aktualizacja wag i biasów ---
@@ -80,28 +77,35 @@ for epoch in range(epochs):
     bh += np.sum(d_hidden, axis=0, keepdims=True) * lr
 
     # --- WARUNEK WCZESNEGO ZATRZYMANIA ---
-    if mse_out <= target_mse:
-        wh_history = np.array(wh_history)
-        wout_history = np.array(wout_history)
+    if mse_total <= target_mse:
         break
 
-# 5. Wizualizacja wyników
 
-# Wykres 1: MSE Wyjściowe
-plt.figure(figsize=(10, 7))
-plt.plot(mse_output_history, color='red', label='MSE Wyjście')
-plt.axhline(y=target_mse, color='black', linestyle='--', label='Próg celu')
-plt.title('Błąd Średniokwadratowy (MSE) - Warstwa Wyjściowa')
-plt.ylabel('Błąd')
+
+#  Wizualizacja wyników
+
+mse_examples_history = np.array(mse_examples_history)
+wh_history = np.array(wh_history)
+wout_history = np.array(wout_history)
+
+# Wykres 1: MSE dla każdego przykładu uczącego
+plt.figure(figsize=(10, 5))
+labels = ['XOR(0,0)', 'XOR(0,1)', 'XOR(1,0)', 'XOR(1,1)']
+for i in range(4):
+    plt.plot(mse_examples_history[:, i], label=labels[i])
+plt.title('MSE dla poszczególnych przykładów uczących')
+plt.xlabel('Epoki')
+plt.ylabel('Kwadrat błędu')
 plt.grid(True, alpha=0.3)
 plt.legend()
 
-# Wykres 2: Sygnał błędu warstwy ukrytej
-plt.figure(figsize=(10, 7))
-plt.plot(mse_hidden_history, color='green', label='Błąd Ukryty')
-plt.axhline(y=target_mse, color='black', linestyle='--', label='Próg celu')
-plt.title('Energia Sygnału Błędu - Warstwa Ukryta (Backprop)')
-plt.ylabel('Błąd')
+# Wykres 2: MSE dla całego zbioru
+plt.figure(figsize=(10, 5))
+plt.plot(mse_total_history, color='black', linewidth=2, label='Total MSE')
+plt.axhline(y=target_mse, color='red', linestyle='--', label='Cel')
+plt.title('MSE dla całego zbioru uczącego')
+plt.xlabel('Epoki')
+plt.ylabel('Średni błąd kwadratowy')
 plt.grid(True, alpha=0.3)
 plt.legend()
 
